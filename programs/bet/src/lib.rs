@@ -12,7 +12,7 @@ use pyth_sdk_solana::load_price_feed_from_account_info;
 use state::*;
 use crate::constants::*;
 use utils::get_unix_timestamp;
-declare_id!("621bgDzE5pFwqtNHam7QsUq8YFhm7c4TfXBo621FWJWo");
+declare_id!("4BURrvZqxAFbCLRRjfVxjK6yXetkRSPoUQLQZeCMwMZK");
 
 #[program]
 pub mod prediction {
@@ -88,14 +88,47 @@ pub mod prediction {
 
        require!(price_data.price <= f64::MAX as i64, BetError::PriceTooBig);
        let pyth_price = price_data.price as f64;
-       masg!("Pyth price is: {}", pyth_price);
+       msg!("Pyth price is: {}", pyth_price);
 
        // Adjust prices to compare them with pyths price 
        // Real price = Pyth price * 10 (Pyth Exponent)
 
-       
+       let multiplier = 10f64.powi(-price_data.expo);
+       let adjusted_player_a = bet.prediction_a.price * multiplier;
+       let adjusted_player_b = bet.predidction_b.as_ref().unwrap().price * multiplier;
+       msg!("Adjustd player A prediction: {}", adjusted_player_a);
+       msg!("Adjustd player B prediction: {}", adjusted_player_b);
 
+       let abs_player_a = (pyth_price - adjusted_player_a).abs();
+       let abs_player_b = (pyth_price - adjusted_player_b).abs();
+       if abs_player_a < abs_player_b {
+          msg!("Winner is Player A, sending {} lamports", prize);
+          bet.state = BetState::PlayerAWon;
+          **ctx.accounts.player_a.to_account_info()
+          .try_borrow_mut_lamports()? +=prize;
+       } else if abs_player_b < abs_player_a {
+            msg!("Winner is Player B, sending {} lamports", prize);
+            bet.state = BetState::PlayerBWon;
+            **ctx.accounts.player_b.to_account_info()
+            .try_borrow_mut_lamports()? +=prize;
+       } else {
+         let draw_amount = bet.amount;
+         msg!("Draw! Sending both player {} lamports", draw_amount);
+         bet.state = BetState::Draw;
+         // Return both players amount back
+         **ctx.accounts.player_a.to_account_info()
+         .try_borrow_mut_lamports()? += draw_amount;
 
+         **ctx.accounts.player_b.to_account_info()
+         .try_borrow_mut_lamports()? += draw_amount;
+
+       }
+
+        Ok(())
+    }
+
+    pub fn close_bet(ctx: Context<CloseBet>) -> Result<()> {
+        
         Ok(())
     }
 }

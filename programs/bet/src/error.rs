@@ -14,5 +14,4 @@ pub enum BetError {
     InvalidPythAccount,
     #[msg("Price is too big toparse to u32")]
     PriceTooBig,
-
 }

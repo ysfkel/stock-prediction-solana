@@ -115,3 +115,20 @@ pub struct ClaimBet<'info> {
 
     pub system_program: Program<'info, System>,
 }   
+
+ #[derive(Accounts)]
+ pub struct CloseBet<'info> {
+    #[account(
+        mut, 
+        seeds = [BET_SEED, &bet.id.to_le_bytes()] /*gets the bet we want to close*/,
+        bump,
+        close = player , //j ust like init, close, handles the closing of the account
+        constraint = validate_close_bet(&bet, player.key()) @ BetError::CannotClose,
+    )] 
+    pub bet: Account<'info, Bet>,
+
+    #[account(mut)]
+    pub player: Signer<'info>,
+
+    pub system_program: Program<'info, System>
+ }
